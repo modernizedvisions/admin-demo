@@ -2,8 +2,8 @@ import type { DemoShippingState } from '../types';
 
 export const seedShippingState: DemoShippingState = {
   shipFrom: {
-    shipFromName: 'Dover Designs Studio',
-    shipFromCompany: 'Dover Designs',
+    shipFromName: 'Admin Demo Studio',
+    shipFromCompany: 'Admin Demo',
     shipFromAddress1: '510 Bayfront Ave',
     shipFromAddress2: 'Suite 2',
     shipFromCity: 'Annapolis',

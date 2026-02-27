@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Admin Demo favicon">
+  <defs>
+    <linearGradient id="mwGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f0f0f"/>
+      <stop offset="1" stop-color="#3a3a36"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#mwGrad)" d="M12 220V28h66l34 80 34-80h98v192h-52V84l-43 95h-9l-43-95v136h-55z"/>
+  <path fill="url(#mwGrad)" d="M112 220l27-94 18 42 18-42 27 94h-40l-5-23h-24l-5 23h-16z"/>
+</svg>
