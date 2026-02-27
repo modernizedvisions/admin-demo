@@ -1,4 +1,5 @@
 import { sendEmail } from '../../_lib/email';
+import { forbidIfDemo } from '../_lib/demoGuard';
 
 type D1PreparedStatement = {
   run(): Promise<{ success: boolean; error?: string }>;
@@ -28,6 +29,8 @@ type CreateInvoiceRequest = {
 
 export async function onRequestPost(context: { env: Env; request: Request }): Promise<Response> {
   try {
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     const body = (await context.request.json().catch(() => null)) as CreateInvoiceRequest | null;
     if (!body) return jsonResponse({ error: 'Invalid JSON body' }, 400);
 

@@ -539,7 +539,7 @@ export function ShippingLabelsModal({ open, order, onClose, onOpenSettings }: Sh
         refreshed.pendingRefresh
           ? 'Label still generating. Try refresh again shortly.'
           : refreshed.refreshed
-          ? 'Refresh Complete — Label is Ready.'
+          ? 'Refresh complete - label is ready.'
           : 'Label status is up to date.'
       );
     } catch (refreshError) {

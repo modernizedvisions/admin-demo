@@ -31,6 +31,7 @@ import {
   type ShippingLabelsEnv,
 } from '../../../../../_lib/shippingLabels';
 import { maybeSendTrackingEmail } from '../../../../../_lib/maybeSendTrackingEmail';
+import { isDemoEnv } from '../../../../../_lib/demoGuard';
 
 type CacheRow = {
   rates_json: string;
@@ -54,6 +55,12 @@ const trimOrNull = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+};
+
+const toPositiveNumberOrNull = (value: unknown): number | null => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return numeric;
 };
 
 const parseCachedRates = (raw: string): EasyshipRate[] => {
@@ -87,6 +94,141 @@ const maybeDebugHints = (rawResponseHints: EasyshipRawResponseHints | undefined)
         rawResponseHints,
       }
     : {};
+
+const parseDemoRates = (value: unknown): EasyshipRate[] => {
+  if (!Array.isArray(value)) return [];
+  return parseCachedRates(JSON.stringify(value));
+};
+
+const buildDemoOrderItems = (value: unknown): EasyshipOrderItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const quantityRaw = Number(row.quantity);
+      const quantity = Number.isFinite(quantityRaw) && quantityRaw > 0 ? Math.floor(quantityRaw) : 1;
+      const declaredValueRaw = Number(row.priceCents);
+      const declaredValueCents =
+        Number.isFinite(declaredValueRaw) && declaredValueRaw >= 0 ? Math.round(declaredValueRaw) : 1;
+      return {
+        description: trimOrNull(row.productName) || 'Order item',
+        quantity,
+        declaredValueCents,
+      };
+    })
+    .filter((item): item is EasyshipOrderItem => !!item);
+};
+
+const buildDemoShipmentFromSnapshot = (
+  shipment: Record<string, unknown>,
+  snapshot: EasyshipShipmentSnapshot,
+  selectedQuoteId: string | null,
+  selectedRate?: { carrier: string; service: string } | null
+) => {
+  const nowIso = new Date().toISOString();
+  const nextLabelState = snapshot.labelState === 'failed' ? 'failed' : snapshot.labelState === 'generated' ? 'generated' : 'pending';
+  return {
+    ...shipment,
+    easyshipShipmentId: snapshot.shipmentId || null,
+    easyshipLabelId: snapshot.labelId || null,
+    carrier: trimOrNull(snapshot.carrier) || trimOrNull(selectedRate?.carrier) || null,
+    service: trimOrNull(snapshot.service) || trimOrNull(selectedRate?.service) || null,
+    trackingNumber: trimOrNull(snapshot.trackingNumber),
+    labelUrl: trimOrNull(snapshot.labelUrl),
+    labelCostAmountCents:
+      Number.isFinite(Number(snapshot.labelCostAmountCents)) && Number(snapshot.labelCostAmountCents) >= 0
+        ? Math.round(Number(snapshot.labelCostAmountCents))
+        : null,
+    labelCurrency: trimOrNull(snapshot.labelCurrency) || 'USD',
+    labelState: nextLabelState,
+    quoteSelectedId: selectedQuoteId,
+    errorMessage: null,
+    purchasedAt: trimOrNull(shipment.purchasedAt) || nowIso,
+    updatedAt: nowIso,
+  };
+};
+
+const toDemoBuyContext = (params: { orderId: string; shipmentId: string }, body: Record<string, unknown> | null) => {
+  const demoOrder = (body?.demoOrder || null) as Record<string, unknown> | null;
+  const demoShipment = (body?.demoShipment || null) as Record<string, unknown> | null;
+  const demoShipFrom = (body?.demoShipFrom || null) as Record<string, unknown> | null;
+  if (!demoOrder || !demoShipment || !demoShipFrom) {
+    return { error: 'Missing demoOrder, demoShipment, or demoShipFrom payload.' } as const;
+  }
+
+  const shippingAddress = (demoOrder.shippingAddress || null) as Record<string, unknown> | null;
+  const destination = {
+    name: trimOrNull(shippingAddress?.name) || trimOrNull(demoOrder.customerName) || 'Customer',
+    companyName: trimOrNull(shippingAddress?.companyName),
+    email: trimOrNull(shippingAddress?.email) || trimOrNull(demoOrder.customerEmail),
+    phone: trimOrNull(shippingAddress?.phone),
+    line1: trimOrNull(shippingAddress?.line1),
+    line2: trimOrNull(shippingAddress?.line2),
+    city: trimOrNull(shippingAddress?.city),
+    state: trimOrNull(shippingAddress?.state),
+    postalCode: trimOrNull(shippingAddress?.postalCode) || trimOrNull(shippingAddress?.postal_code),
+    country: (trimOrNull(shippingAddress?.country) || 'US').toUpperCase(),
+  };
+  if (!hasRequiredDestination(destination)) {
+    return { error: 'Order shipping destination is incomplete.' } as const;
+  }
+
+  const dimensions = {
+    lengthIn:
+      toPositiveNumberOrNull(demoShipment.effectiveLengthIn) ??
+      toPositiveNumberOrNull(demoShipment.customLengthIn) ??
+      toPositiveNumberOrNull(demoShipment.lengthIn),
+    widthIn:
+      toPositiveNumberOrNull(demoShipment.effectiveWidthIn) ??
+      toPositiveNumberOrNull(demoShipment.customWidthIn) ??
+      toPositiveNumberOrNull(demoShipment.widthIn),
+    heightIn:
+      toPositiveNumberOrNull(demoShipment.effectiveHeightIn) ??
+      toPositiveNumberOrNull(demoShipment.customHeightIn) ??
+      toPositiveNumberOrNull(demoShipment.heightIn),
+    weightLb: toPositiveNumberOrNull(demoShipment.weightLb),
+  };
+  if (!dimensions.lengthIn || !dimensions.widthIn || !dimensions.heightIn || !dimensions.weightLb) {
+    return { error: 'Shipment is missing box dimensions or weight.' } as const;
+  }
+
+  const shipFrom = {
+    shipFromName: trimOrNull(demoShipFrom.shipFromName) || '',
+    shipFromCompany: trimOrNull(demoShipFrom.shipFromCompany) || 'Dover Designs',
+    shipFromAddress1: trimOrNull(demoShipFrom.shipFromAddress1) || '',
+    shipFromAddress2: trimOrNull(demoShipFrom.shipFromAddress2) || '',
+    shipFromCity: trimOrNull(demoShipFrom.shipFromCity) || '',
+    shipFromState: trimOrNull(demoShipFrom.shipFromState) || '',
+    shipFromPostal: trimOrNull(demoShipFrom.shipFromPostal) || '',
+    shipFromCountry: (trimOrNull(demoShipFrom.shipFromCountry) || 'US').toUpperCase(),
+    shipFromPhone: trimOrNull(demoShipFrom.shipFromPhone) || '',
+    updatedAt: null,
+  };
+
+  const missingShipFrom = validateShipFrom(shipFrom);
+  if (missingShipFrom.length) {
+    return {
+      error: 'Ship-from settings are incomplete.',
+      missingShipFrom,
+    } as const;
+  }
+
+  return {
+    orderId: trimOrNull(demoOrder.id) || params.orderId,
+    shipmentId: trimOrNull(demoShipment.id) || params.shipmentId,
+    shipFrom,
+    destination,
+    dimensions: {
+      lengthIn: dimensions.lengthIn,
+      widthIn: dimensions.widthIn,
+      heightIn: dimensions.heightIn,
+      weightLb: dimensions.weightLb,
+    },
+    items: buildDemoOrderItems(demoOrder.items),
+    shipment: demoShipment,
+  } as const;
+};
 
 const toEasyshipRateRequest = (
   shipFrom: Awaited<ReturnType<typeof readShippingSettings>>,
@@ -210,6 +352,116 @@ export async function onRequestPost(
   if (!params) return jsonResponse({ ok: false, error: 'Missing orderId or shipmentId' }, 400);
 
   try {
+    const body = (await context.request.json().catch(() => null)) as Record<string, unknown> | null;
+    if (isDemoEnv(context.env as Record<string, unknown>)) {
+      const demo = toDemoBuyContext(params, body);
+      if ('error' in demo) {
+        return jsonResponse(
+          {
+            ok: false,
+            error: demo.error,
+            ...(demo.missingShipFrom ? { missing: demo.missingShipFrom } : {}),
+          },
+          400
+        );
+      }
+
+      const refresh = body?.refresh === true;
+      let selectedQuoteId = trimOrNull(body?.quoteSelectedId) || trimOrNull(demo.shipment.quoteSelectedId) || null;
+      const allowedCarriers = getAllowedCarriers(context.env);
+      const rateRequest = toEasyshipRateRequest(demo.shipFrom, demo.destination, demo.dimensions, demo.items);
+      const nowIso = new Date().toISOString();
+
+      if (refresh) {
+        const easyshipShipmentId = trimOrNull(demo.shipment.easyshipShipmentId);
+        if (!easyshipShipmentId) {
+          return jsonResponse(
+            { ok: false, code: 'MISSING_EASYSHIP_SHIPMENT', error: 'Shipment has no Easyship shipment id to refresh.' },
+            409
+          );
+        }
+
+        const refreshed = await refreshEasyshipShipment(context.env, easyshipShipmentId);
+        const updated = buildDemoShipmentFromSnapshot(demo.shipment, refreshed, selectedQuoteId, null);
+        return jsonResponse({
+          ok: true,
+          refreshed: true,
+          shipment: updated,
+          shipments: [updated],
+          selectedQuoteId,
+          pendingRefresh: !!updated && updated.labelState === 'pending' && !!updated.easyshipShipmentId,
+        });
+      }
+
+      let rates = parseDemoRates(body?.demoRates);
+      if (!rates.length) {
+        const liveRates = await fetchEasyshipRates(context.env, rateRequest);
+        if (!liveRates.rates.length) {
+          return jsonResponse(
+            {
+              ok: false,
+              code: 'NO_RATES',
+              error: liveRates.warning || NO_SHIPPING_SOLUTIONS_MESSAGE,
+              message: liveRates.warning || NO_SHIPPING_SOLUTIONS_MESSAGE,
+              ...maybeDebugHints(liveRates.rawResponseHints),
+            },
+            400
+          );
+        }
+        rates = filterAllowedRates(liveRates.rates, allowedCarriers).sort((a, b) => a.amountCents - b.amountCents);
+        if (!rates.length) {
+          return jsonResponse(
+            {
+              ok: false,
+              code: 'NO_QUOTES',
+              error: 'No supported carrier quotes found for this parcel.',
+              ...maybeDebugHints(liveRates.rawResponseHints),
+            },
+            422
+          );
+        }
+      }
+
+      let selectedRate: EasyshipRate | null = null;
+      if (selectedQuoteId) {
+        selectedRate = rates.find((rate) => rate.id === selectedQuoteId) || null;
+        if (!selectedRate) {
+          return jsonResponse(
+            { ok: false, code: 'QUOTE_NOT_FOUND', error: 'Selected quote not found for this shipment.' },
+            400
+          );
+        }
+      } else {
+        selectedRate = pickCheapestRate(rates);
+        selectedQuoteId = selectedRate?.id || null;
+      }
+      if (!selectedRate || !selectedQuoteId) {
+        return jsonResponse({ ok: false, code: 'NO_RATE_SELECTED', error: 'No rate available for label purchase.' }, 400);
+      }
+
+      const created = await createShipmentAndBuyLabel(context.env, {
+        ...rateRequest,
+        courierServiceId: selectedQuoteId,
+        externalReference: `${demo.orderId}:${demo.shipmentId}`,
+      });
+      const updated = buildDemoShipmentFromSnapshot(
+        demo.shipment,
+        created,
+        selectedQuoteId,
+        { carrier: selectedRate.carrier, service: selectedRate.service }
+      );
+
+      return jsonResponse({
+        ok: true,
+        shipment: updated,
+        shipments: [updated],
+        selectedQuoteId,
+        pendingRefresh: !!updated && updated.labelState === 'pending' && !!updated.easyshipShipmentId,
+        refreshed: false,
+        purchasedAt: nowIso,
+      });
+    }
+
     await ensureShippingLabelsSchema(context.env.DB);
     if (!(await orderExists(context.env.DB, params.orderId))) {
       if (isEasyshipDebugEnabled(context.env)) {
@@ -233,7 +485,6 @@ export async function onRequestPost(
       return jsonResponse({ ok: false, error: 'Shipment not found' }, 404);
     }
 
-    const body = (await context.request.json().catch(() => null)) as Record<string, unknown> | null;
     const refresh = body?.refresh === true;
     let selectedQuoteId = trimOrNull(body?.quoteSelectedId) || shipment.quoteSelectedId || null;
     const previousTrackingNumber = shipment.trackingNumber;

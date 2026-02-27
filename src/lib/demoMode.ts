@@ -1,0 +1,1 @@
+export const isDemoAdmin = () => import.meta.env.VITE_DEMO_ADMIN === '1';

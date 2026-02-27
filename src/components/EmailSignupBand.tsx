@@ -44,39 +44,38 @@ export function EmailSignupBand({ className = '' }: EmailSignupBandProps) {
     <section className={`lux-card p-6 sm:p-8 ${className}`}>
       <div className="space-y-3 text-center">
         <h2 className="lux-heading text-3xl sm:text-4xl">Join our Email List</h2>
-        <p className="lux-label text-[10px] mx-auto max-w-2xl">
-          New drops, restocks, and updates from Dover Designs.
-        </p>
       </div>
 
-      <form className="mt-6 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+      <form className="mt-6 w-full max-w-2xl mx-auto" onSubmit={handleSubmit}>
         <label htmlFor="email-list-address" className="sr-only">
           Email address
         </label>
-        <input
-          id="email-list-address"
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="you@example.com"
-          className="lux-input h-11 flex-1 text-sm placeholder:font-serif placeholder:tracking-[0.03em] placeholder:text-charcoal/60"
-        />
-        <button
-          type="submit"
-          disabled={state === 'submitting'}
-          className="lux-button h-11 px-5 text-[11px] disabled:opacity-60"
-        >
-          {state === 'submitting' ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Subscribing...
-            </span>
-          ) : (
-            'Join'
-          )}
-        </button>
+        <div className="relative">
+          <input
+            id="email-list-address"
+            type="email"
+            required
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            className="lux-input h-12 w-full pr-28 text-sm placeholder:font-serif placeholder:tracking-[0.03em] placeholder:text-charcoal/60"
+          />
+          <button
+            type="submit"
+            disabled={state === 'submitting'}
+            className="lux-button absolute right-1.5 top-1/2 h-9 -translate-y-1/2 px-4 text-[11px] disabled:opacity-60"
+          >
+            {state === 'submitting' ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Joining...
+              </span>
+            ) : (
+              'Join'
+            )}
+          </button>
+        </div>
       </form>
 
       {state === 'success' && <p className="mt-3 text-sm text-emerald-700">{message}</p>}

@@ -21,6 +21,7 @@ import {
 } from '../lib/shipping';
 import { resolveCustomOrderEmailImage } from '../../_lib/customOrderEmailImages';
 import { constructStripeEvent, listCheckoutSessionLineItems, retrieveCheckoutSession } from '../../_lib/stripeClient';
+import { forbidIfDemo } from '../_lib/demoGuard';
 
 type D1PreparedStatement = {
   bind(...values: unknown[]): D1PreparedStatement;
@@ -148,6 +149,8 @@ export const onRequestPost = async (context: {
   env: Env;
 }) => {
   const { request, env } = context;
+  const blocked = forbidIfDemo(env as Record<string, unknown>);
+  if (blocked) return blocked;
   const ownerTo = env.RESEND_OWNER_TO || env.EMAIL_OWNER_TO;
   const siteUrl = (env.PUBLIC_SITE_URL || env.VITE_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
   const emailDebug = env.EMAIL_DEBUG === '1' || (env as any).DEBUG_EMAILS === '1';

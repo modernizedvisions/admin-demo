@@ -24,6 +24,8 @@ import type { Category, HomeSiteContent } from './types';
 import { normalizeImageUrl } from './images';
 import { optimizeImageForUpload } from './imageOptimization';
 import { adminFetch, notifyAdminAuthRequired } from './adminAuth';
+import { isDemoAdmin } from './demoMode';
+import * as adminClient from './adminClient';
 
 const debugAdminImageUpload = (...args: unknown[]) => {
   if (!import.meta.env.DEV) return;
@@ -69,7 +71,7 @@ export type UploadScope = 'products' | 'gallery' | 'home' | 'categories' | 'cust
 export type CustomOrderExample = {
   id: string;
   imageUrl: string;
-  imageId?: string;
+  imageId?: string | null;
   title: string;
   description: string;
   tags: string[];
@@ -78,6 +80,19 @@ export type CustomOrderExample = {
 };
 
 export async function fetchGalleryImages() {
+  if (isDemoAdmin()) {
+    const images = await adminClient.listGalleryImages();
+    return images.map((img: any, idx: number) => ({
+      id: img.id || `gallery-${idx}`,
+      imageUrl: normalizeImageUrl(img.imageUrl || img.image_url || ''),
+      imageId: img.imageId || img.image_id || undefined,
+      hidden: !!(img.hidden ?? img.is_active === 0),
+      alt: img.alt || img.alt_text,
+      title: img.title || img.alt || img.alt_text,
+      position: typeof img.position === 'number' ? img.position : idx,
+      createdAt: img.createdAt || img.created_at,
+    }));
+  }
   const response = await fetch('/api/gallery', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -98,6 +113,9 @@ export async function fetchGalleryImages() {
 }
 
 export async function saveGalleryImages(images: any[]) {
+  if (isDemoAdmin()) {
+    return adminClient.saveGalleryImages(images);
+  }
   const response = await adminFetch('/api/gallery', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -134,6 +152,7 @@ export async function fetchCategories(): Promise<Category[]> {
 const ADMIN_CATEGORIES_PATH = '/api/admin/categories';
 
 export async function adminFetchCategories(): Promise<Category[]> {
+  if (isDemoAdmin()) return adminClient.listCategories();
   const response = await adminFetch(ADMIN_CATEGORIES_PATH, { headers: { Accept: 'application/json' } });
   if (!response.ok) throw new Error(`Admin categories fetch failed: ${response.status}`);
   const data = await response.json();
@@ -151,6 +170,7 @@ export async function fetchCustomOrderExamples(): Promise<CustomOrderExample[]> 
 }
 
 export async function adminFetchCustomOrderExamples(): Promise<CustomOrderExample[]> {
+  if (isDemoAdmin()) return adminClient.listCustomOrderExamples() as Promise<CustomOrderExample[]>;
   const response = await adminFetch('/api/admin/custom-orders/examples', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -161,6 +181,7 @@ export async function adminFetchCustomOrderExamples(): Promise<CustomOrderExampl
 }
 
 export async function adminSaveCustomOrderExamples(examples: CustomOrderExample[]): Promise<CustomOrderExample[]> {
+  if (isDemoAdmin()) return adminClient.saveCustomOrderExamples(examples as any) as Promise<CustomOrderExample[]>;
   const response = await adminFetch('/api/admin/custom-orders/examples', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -179,6 +200,7 @@ export async function adminCreateCategory(payload: {
   optionGroupLabel?: string | null;
   optionGroupOptions?: string[];
 }): Promise<Category | null> {
+  if (isDemoAdmin()) return adminClient.createCategory(payload as any);
   const response = await adminFetch(ADMIN_CATEGORIES_PATH, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -190,6 +212,7 @@ export async function adminCreateCategory(payload: {
 }
 
 export async function adminUpdateCategory(id: string, updates: Partial<Category>): Promise<Category | null> {
+  if (isDemoAdmin()) return adminClient.updateCategory(id, updates);
   const response = await adminFetch(`${ADMIN_CATEGORIES_PATH}?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -201,6 +224,7 @@ export async function adminUpdateCategory(id: string, updates: Partial<Category>
 }
 
 export async function adminDeleteCategory(id: string): Promise<void> {
+  if (isDemoAdmin()) return adminClient.deleteCategory(id);
   const response = await adminFetch(`${ADMIN_CATEGORIES_PATH}?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Accept: 'application/json' },
@@ -225,6 +249,11 @@ export async function adminUploadImage(
   storageKey?: string;
   warning?: string;
 }> {
+  if (isDemoAdmin()) {
+    opts?.onStatus?.('optimizing');
+    opts?.onStatus?.('uploading');
+    return adminClient.uploadImage(file);
+  }
   return adminUploadImageUnified(file, {
     scope: 'products',
     onStatus: opts?.onStatus,
@@ -254,6 +283,11 @@ export async function adminUploadImageUnified(
   storageKey?: string;
   warning?: string;
 }> {
+  if (isDemoAdmin()) {
+    opts?.onStatus?.('optimizing');
+    opts?.onStatus?.('uploading');
+    return adminClient.uploadImage(file);
+  }
   const scope = opts?.scope || 'products';
   const maxDimension = scope === 'home' ? 2400 : 1600;
   const targetBytes = scope === 'home' ? 900 * 1024 : 500 * 1024;
@@ -525,6 +559,11 @@ export async function adminUploadImageScoped(
   storageKey?: string;
   warning?: string;
 }> {
+  if (isDemoAdmin()) {
+    opts?.onStatus?.('optimizing');
+    opts?.onStatus?.('uploading');
+    return adminClient.uploadImage(file);
+  }
   return adminUploadImageUnified(file, opts);
 }
 
@@ -571,6 +610,7 @@ export async function getPublicSiteContentHome(): Promise<HomeSiteContent> {
 }
 
 export async function getAdminSiteContentHome(): Promise<HomeSiteContent> {
+  if (isDemoAdmin()) return adminClient.getHomeContent();
   const response = await adminFetch('/api/admin/site-content', { headers: { Accept: 'application/json' }, cache: 'no-store' });
   if (!response.ok) throw new Error(`Admin site content API responded with ${response.status}`);
   const data = await response.json();
@@ -578,6 +618,7 @@ export async function getAdminSiteContentHome(): Promise<HomeSiteContent> {
 }
 
 export async function updateAdminSiteContentHome(payload: HomeSiteContent): Promise<HomeSiteContent> {
+  if (isDemoAdmin()) return adminClient.setHomeContent(payload);
   const response = await adminFetch('/api/admin/site-content', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -589,6 +630,7 @@ export async function updateAdminSiteContentHome(payload: HomeSiteContent): Prom
 }
 
 export async function adminDeleteMessage(id: string): Promise<void> {
+  if (isDemoAdmin()) return adminClient.deleteMessage(id);
   const response = await adminFetch(`/api/admin/messages/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Accept: 'application/json' },
@@ -601,6 +643,7 @@ export async function adminDeleteMessage(id: string): Promise<void> {
 }
 
 export async function adminDeleteImage(id: string): Promise<void> {
+  if (isDemoAdmin()) return adminClient.deleteImage(id);
   const response = await adminFetch(`/api/admin/images/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: {
@@ -613,3 +656,10 @@ export async function adminDeleteImage(id: string): Promise<void> {
     throw new Error(trimmed || `Delete image failed (${response.status})`);
   }
 }
+
+
+
+
+
+
+

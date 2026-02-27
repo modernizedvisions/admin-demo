@@ -5,6 +5,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { adminDeleteMessage } from '../../lib/api';
 import { adminFetch } from '../../lib/adminAuth';
+import { isDemoAdmin } from '../../lib/demoMode';
+import { listMessages, markMessageRead as markDemoMessageRead } from '../../lib/adminClient';
 import { AdminSectionHeader } from './AdminSectionHeader';
 import { formatEasternDateTime } from '../../lib/dates';
 
@@ -55,25 +57,32 @@ export const AdminMessagesTab: React.FC<AdminMessagesTabProps> = ({ onCreateCust
       try {
         setIsLoading(true);
         setError(null);
-        const res = await adminFetch('/api/admin/messages');
-        if (!res.ok) throw new Error('Failed to load messages');
-        const json = await res.json();
-        let incoming: AdminMessage[];
-        if (Array.isArray(json)) {
-          incoming = json as AdminMessage[];
-        } else if (Array.isArray(json?.messages)) {
-          incoming = json.messages as AdminMessage[];
+        if (isDemoAdmin()) {
+          const data = await listMessages();
+          const incoming = Array.isArray(data.messages) ? (data.messages as AdminMessage[]) : [];
+          setMessages(incoming);
+          onUnreadCountChange?.(data.unreadCount);
         } else {
-          console.error('[AdminMessagesTab] Unexpected messages payload', json);
-          incoming = [];
+          const res = await adminFetch('/api/admin/messages');
+          if (!res.ok) throw new Error('Failed to load messages');
+          const json = await res.json();
+          let incoming: AdminMessage[];
+          if (Array.isArray(json)) {
+            incoming = json as AdminMessage[];
+          } else if (Array.isArray(json?.messages)) {
+            incoming = json.messages as AdminMessage[];
+          } else {
+            console.error('[AdminMessagesTab] Unexpected messages payload', json);
+            incoming = [];
+          }
+          console.log('[AdminMessagesTab] Loaded messages', incoming);
+          setMessages(incoming);
+          const unreadCount =
+            typeof json?.unreadCount === 'number'
+              ? json.unreadCount
+              : incoming.reduce((count, msg) => count + (msg.isRead ? 0 : 1), 0);
+          onUnreadCountChange?.(unreadCount);
         }
-        console.log('[AdminMessagesTab] Loaded messages', incoming);
-        setMessages(incoming);
-        const unreadCount =
-          typeof json?.unreadCount === 'number'
-            ? json.unreadCount
-            : incoming.reduce((count, msg) => count + (msg.isRead ? 0 : 1), 0);
-        onUnreadCountChange?.(unreadCount);
       } catch (err) {
         console.error('[AdminMessagesTab] Failed to load messages', err);
         setError('Failed to load messages');
@@ -132,18 +141,23 @@ export const AdminMessagesTab: React.FC<AdminMessagesTabProps> = ({ onCreateCust
 
   const markMessageRead = async (id: string) => {
     try {
-      const res = await adminFetch('/api/admin/messages/read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || 'Failed to mark message as read');
-      }
-      const data = await res.json().catch(() => null);
-      if (typeof data?.unreadCount === 'number') {
+      if (isDemoAdmin()) {
+        const data = await markDemoMessageRead(id);
         onUnreadCountChange?.(data.unreadCount);
+      } else {
+        const res = await adminFetch('/api/admin/messages/read', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || 'Failed to mark message as read');
+        }
+        const data = await res.json().catch(() => null);
+        if (typeof data?.unreadCount === 'number') {
+          onUnreadCountChange?.(data.unreadCount);
+        }
       }
     } catch (err) {
       console.error('[AdminMessagesTab] Failed to mark message as read', err);
@@ -462,3 +476,6 @@ export const AdminMessagesTab: React.FC<AdminMessagesTabProps> = ({ onCreateCust
     </div>
   );
 };
+
+
+

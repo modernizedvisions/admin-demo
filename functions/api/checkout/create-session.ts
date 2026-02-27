@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { calculateShippingCents } from '../../_lib/shipping';
 import { createCheckoutSession } from '../../_lib/stripeClient';
+import { forbidIfDemo } from '../_lib/demoGuard';
 
 type D1PreparedStatement = {
   bind(...values: unknown[]): D1PreparedStatement;
@@ -196,6 +197,8 @@ export const onRequestPost = async (context: {
   env: { DB: D1Database; STRIPE_SECRET_KEY?: string; VITE_PUBLIC_SITE_URL?: string; SHIPPING_DEBUG?: string };
 }) => {
   const { request, env } = context;
+  const blocked = forbidIfDemo(env as Record<string, unknown>);
+  if (blocked) return blocked;
   const stripeSecretKey = env.STRIPE_SECRET_KEY;
   const shippingDebug = env.SHIPPING_DEBUG === '1';
   const invalidImageSamples: string[] = [];

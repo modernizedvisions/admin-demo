@@ -5,6 +5,7 @@ import {
   resolveImageUrlsToIds,
 } from '../lib/images';
 import { requireAdmin } from '../_lib/adminAuth';
+import { forbidIfDemo } from '../_lib/demoGuard';
 import { createStripePrice, createStripeProduct } from '../../_lib/stripeClient';
 
 type D1PreparedStatement = {
@@ -290,6 +291,8 @@ export async function onRequestPost(context: { env: { DB: D1Database; STRIPE_SEC
   try {
     const unauthorized = await requireAdmin(context.request, context.env);
     if (unauthorized) return unauthorized;
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     console.log('[products save] incoming', {
       method: context.request.method,
       url: context.request.url,
@@ -501,6 +504,8 @@ async function onRequestDelete(context: { env: { DB: D1Database }; request: Requ
   try {
     const unauthorized = await requireAdmin(context.request, context.env);
     if (unauthorized) return unauthorized;
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     const url = new URL(context.request.url);
     let id = url.searchParams.get('id');
 

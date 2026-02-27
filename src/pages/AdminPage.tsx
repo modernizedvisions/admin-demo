@@ -37,6 +37,9 @@ import {
 } from '../lib/db/customOrders';
 import type { AdminCustomOrder } from '../lib/db/customOrders';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { isDemoAdmin } from '../lib/demoMode';
+import { actions as demoStoreActions } from '../demo/demoStore';
+import { listMessages as listDemoMessages, markOrderSeen as markDemoOrderSeen } from '../lib/adminClient';
 
 export type ProductFormState = {
   name: string;
@@ -176,7 +179,7 @@ const ADMIN_TABS: Array<{ key: AdminTabKey; label: string; badge?: number }> = [
   { key: 'promotions', label: 'Promotions' },
   { key: 'emailList', label: 'Email List' },
   { key: 'images', label: 'Images' },
-  { key: 'settings', label: 'SHIPPING SETTINGS' },
+  { key: 'settings', label: 'Shipping Settings' },
   { key: 'sold', label: 'Sold Products' },
 ];
 
@@ -194,6 +197,7 @@ const resolveTabFromPath = (pathname: string): AdminTabKey => {
 };
 
 export function AdminPage() {
+  const demoMode = isDemoAdmin();
   const navigate = useNavigate();
   const location = useLocation();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -220,7 +224,6 @@ export function AdminPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const productImageFileInputRef = useRef<HTMLInputElement | null>(null);
   const editProductImageFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [messages] = useState<any[]>([]);
   const [customOrders, setCustomOrders] = useState<AdminCustomOrder[]>([]);
   const [customOrderDraft, setCustomOrderDraft] = useState<any>(null);
   const [customOrdersError, setCustomOrdersError] = useState<string | null>(null);
@@ -244,6 +247,7 @@ export function AdminPage() {
   }, [orders, searchQuery]);
 
   useEffect(() => {
+    if (demoMode) return;
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ message?: string }>).detail;
       if (import.meta.env.DEV) {
@@ -253,7 +257,7 @@ export function AdminPage() {
     };
     window.addEventListener('admin-auth-required', handler as EventListener);
     return () => window.removeEventListener('admin-auth-required', handler as EventListener);
-  }, []);
+  }, [demoMode]);
 
   useEffect(() => {
     if (activeTab === 'shop' || activeTab === 'sold') {
@@ -287,22 +291,27 @@ export function AdminPage() {
     }
 
     try {
-      const res = await adminFetch('/api/admin/messages', {
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-      });
-      if (res.ok) {
-        const data = await res.json().catch(() => null);
-        if (typeof data?.unreadCount === 'number') {
-          setUnreadMessages(data.unreadCount);
-        } else if (Array.isArray(data?.messages)) {
-          const count = data.messages.reduce((total: number, msg: any) => total + (msg?.isRead ? 0 : 1), 0);
-          setUnreadMessages(count);
+      if (demoMode) {
+        const data = await listDemoMessages();
+        setUnreadMessages(data.unreadCount);
+      } else {
+        const res = await adminFetch('/api/admin/messages', {
+          headers: { Accept: 'application/json' },
+          cache: 'no-store',
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          if (typeof data?.unreadCount === 'number') {
+            setUnreadMessages(data.unreadCount);
+          } else if (Array.isArray(data?.messages)) {
+            const count = data.messages.reduce((total: number, msg: any) => total + (msg?.isRead ? 0 : 1), 0);
+            setUnreadMessages(count);
+          } else {
+            setUnreadMessages(0);
+          }
         } else {
           setUnreadMessages(0);
         }
-      } else {
-        setUnreadMessages(0);
       }
     } catch (err) {
       console.error('Failed to load admin message count', err);
@@ -366,6 +375,12 @@ export function AdminPage() {
   };
 
   const handleLogout = async () => {
+    if (demoMode) {
+      demoStoreActions.reset();
+      window.location.href = '/admin';
+      return;
+    }
+
     try {
       await fetch('/api/admin/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (error) {
@@ -411,6 +426,12 @@ export function AdminPage() {
 
   const markOrderSeen = async (orderId: string) => {
     try {
+      if (demoMode) {
+        const data = await markDemoOrderSeen(orderId);
+        setUnseenOrders(data.unseenCount);
+        return;
+      }
+
       const res = await adminFetch('/api/admin/orders/seen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1182,13 +1203,27 @@ export function AdminPage() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="lux-heading text-3xl">Admin Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            className="lux-button--ghost px-4 py-2 text-[10px]"
-          >
-            Logout
-          </button>
+          {demoMode ? (
+            <button
+              onClick={handleLogout}
+              className="lux-button px-4 py-2 text-[10px]"
+            >
+              Reset Demo
+            </button>
+          ) : (
+            <button
+              onClick={handleLogout}
+              className="lux-button--ghost px-4 py-2 text-[10px]"
+            >
+              Logout
+            </button>
+          )}
         </div>
+        {demoMode && (
+          <div className="mb-4 rounded-shell border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Public Demo Mode - changes reset on refresh
+          </div>
+        )}
 
           <div className="mb-6 border-b border-driftwood/50 pb-2">
           <nav className="flex gap-3 justify-start md:justify-center overflow-x-auto overflow-y-visible whitespace-nowrap -mx-4 px-4 py-2 md:mx-0 md:px-0">
@@ -1266,7 +1301,6 @@ export function AdminPage() {
 
         {activeTab === 'messages' && (
           <AdminMessagesTab
-            messages={messages}
             onCreateCustomOrderFromMessage={handleCreateCustomOrderFromMessage}
             onUnreadCountChange={setUnreadMessages}
           />
@@ -1375,7 +1409,7 @@ export function AdminPage() {
                   const hasInvalid = galleryImages.some((img) => img.url?.startsWith('blob:') || img.url?.startsWith('data:'));
                   if (hasPending) throw new Error('Gallery images are still uploading.');
                   if (hasErrors) throw new Error('Fix failed gallery uploads before saving.');
-                  if (missingUrl) throw new Error('Some images haven’t finished uploading.');
+                  if (missingUrl) throw new Error("Some images haven't finished uploading.");
                   if (hasInvalid) throw new Error('Gallery images must be uploaded first (no blob/data URLs).');
                   const normalized = galleryImages.map((img, idx) => ({
                     id: img.id,

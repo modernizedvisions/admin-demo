@@ -1,4 +1,5 @@
 import { createCheckoutSession, retrieveCheckoutSession } from '../../_lib/stripeClient';
+import { forbidIfDemo } from '../_lib/demoGuard';
 
 type D1PreparedStatement = {
   bind(...values: unknown[]): D1PreparedStatement;
@@ -35,6 +36,8 @@ const json = (data: unknown, status = 200) =>
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
+  const blocked = forbidIfDemo(env as Record<string, unknown>);
+  if (blocked) return blocked;
   const stripeSecret = env.STRIPE_SECRET_KEY;
   if (!stripeSecret) return json({ error: 'Stripe not configured' }, 500);
 
@@ -118,4 +121,3 @@ async function fetchInvoice(db: D1Database, id: string): Promise<InvoiceRow | nu
     .first<InvoiceRow>();
   return row || null;
 }
-

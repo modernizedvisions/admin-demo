@@ -1,4 +1,12 @@
 import { adminFetch } from '../adminAuth';
+import { isDemoAdmin } from '../demoMode';
+import {
+  archiveCustomOrder as archiveDemoCustomOrder,
+  createCustomOrder as createDemoCustomOrder,
+  listCustomOrders as listDemoCustomOrders,
+  sendCustomOrderPaymentLink as sendDemoPaymentLink,
+  updateCustomOrder as updateDemoCustomOrder,
+} from '../adminClient';
 
 export type AdminCustomOrder = {
   id: string;
@@ -22,14 +30,11 @@ export type AdminCustomOrder = {
 const ADMIN_CUSTOM_ORDERS_PATH = '/api/admin/custom-orders';
 
 export async function getAdminCustomOrders(): Promise<AdminCustomOrder[]> {
+  if (isDemoAdmin()) return listDemoCustomOrders();
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
-
   const url = `${ADMIN_CUSTOM_ORDERS_PATH}?ts=${Date.now()}`;
-
-  if (import.meta.env.DEV) {
-    console.debug('[admin custom orders] fetching', { url });
-  }
 
   const res = await adminFetch(url, {
     headers: { Accept: 'application/json' },
@@ -38,32 +43,12 @@ export async function getAdminCustomOrders(): Promise<AdminCustomOrder[]> {
   }).finally(() => clearTimeout(timeout));
 
   const bodyText = await res.text();
-  const preview = bodyText.slice(0, 500);
-
-  if (import.meta.env.DEV) {
-    console.debug('[admin custom orders] fetch response', { status: res.status, bodyPreview: preview });
-  }
-
   if (!res.ok) {
     throw new Error(bodyText || `Failed to fetch admin custom orders (${res.status})`);
   }
 
-  let data: any = {};
-  try {
-    data = bodyText ? JSON.parse(bodyText) : {};
-  } catch (err) {
-    console.error('Failed to parse admin custom orders response', err);
-    throw new Error('Failed to parse admin custom orders response');
-  }
-
-  const orders = Array.isArray(data.orders) ? (data.orders as AdminCustomOrder[]) : [];
-  if (import.meta.env.DEV) {
-    console.debug('[admin custom orders] parsed orders', { count: orders.length, sample: orders.slice(0, 2), raw: data });
-    if (orders.length === 0) {
-      console.debug('[admin custom orders] empty orders array returned from /api/admin/custom-orders');
-    }
-  }
-  return orders;
+  const data = bodyText ? JSON.parse(bodyText) : {};
+  return Array.isArray(data.orders) ? (data.orders as AdminCustomOrder[]) : [];
 }
 
 export async function createAdminCustomOrder(payload: {
@@ -77,7 +62,24 @@ export async function createAdminCustomOrder(payload: {
   showOnSoldProducts?: boolean;
   messageId?: string | null;
   shippingCents?: number;
+  paymentLink?: string | null;
 }): Promise<AdminCustomOrder> {
+  if (isDemoAdmin()) {
+    return createDemoCustomOrder({
+      customerName: payload.customerName,
+      customerEmail: payload.customerEmail,
+      description: payload.description,
+      imageUrl: payload.imageUrl,
+      imageId: payload.imageId,
+      imageStorageKey: payload.imageStorageKey,
+      amount: payload.amount,
+      showOnSoldProducts: payload.showOnSoldProducts,
+      shippingCents: payload.shippingCents,
+      status: 'pending',
+      paymentLink: null,
+    });
+  }
+
   const res = await adminFetch(ADMIN_CUSTOM_ORDERS_PATH, {
     method: 'POST',
     headers: {
@@ -89,17 +91,12 @@ export async function createAdminCustomOrder(payload: {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message =
-      (data && (data.error || data.detail)) ||
-      `Failed to create custom order (${res.status})`;
+    const message = (data && (data.error || data.detail)) || `Failed to create custom order (${res.status})`;
     throw new Error(message);
   }
 
-  if (data?.order) {
-    return data.order as AdminCustomOrder;
-  }
+  if (data?.order) return data.order as AdminCustomOrder;
 
-  // Fallback for older responses
   return {
     id: data.id as string,
     displayCustomOrderId: data.displayId as string,
@@ -134,6 +131,11 @@ export async function updateAdminCustomOrder(
     messageId: string | null;
   }>
 ): Promise<void> {
+  if (isDemoAdmin()) {
+    await updateDemoCustomOrder(id, patch as Partial<AdminCustomOrder>);
+    return;
+  }
+
   const res = await adminFetch(`${ADMIN_CUSTOM_ORDERS_PATH}/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: {
@@ -145,14 +147,14 @@ export async function updateAdminCustomOrder(
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    const message =
-      (data && (data.error || data.detail)) ||
-      `Failed to update custom order (${res.status})`;
+    const message = (data && (data.error || data.detail)) || `Failed to update custom order (${res.status})`;
     throw new Error(message);
   }
 }
 
 export async function archiveAdminCustomOrder(id: string): Promise<AdminCustomOrder> {
+  if (isDemoAdmin()) return archiveDemoCustomOrder(id);
+
   const res = await adminFetch(`${ADMIN_CUSTOM_ORDERS_PATH}/${encodeURIComponent(id)}/archive`, {
     method: 'PATCH',
     headers: {
@@ -162,21 +164,19 @@ export async function archiveAdminCustomOrder(id: string): Promise<AdminCustomOr
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message =
-      (data && (data.error || data.detail)) ||
-      `Failed to archive custom order (${res.status})`;
+    const message = (data && (data.error || data.detail)) || `Failed to archive custom order (${res.status})`;
     throw new Error(message);
   }
 
-  if (data?.order) {
-    return data.order as AdminCustomOrder;
-  }
-
+  if (data?.order) return data.order as AdminCustomOrder;
   throw new Error('Failed to archive custom order');
 }
+
 export async function sendAdminCustomOrderPaymentLink(
   id: string
 ): Promise<{ paymentLink: string; sessionId: string; emailOk?: boolean }> {
+  if (isDemoAdmin()) return sendDemoPaymentLink(id);
+
   const res = await adminFetch(`${ADMIN_CUSTOM_ORDERS_PATH}/${encodeURIComponent(id)}/send-payment-link`, {
     method: 'POST',
     headers: {
@@ -186,9 +186,7 @@ export async function sendAdminCustomOrderPaymentLink(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message =
-      (data && (data.error || data.detail)) ||
-      `Failed to send payment link (${res.status})`;
+    const message = (data && (data.error || data.detail)) || `Failed to send payment link (${res.status})`;
     throw new Error(message);
   }
 

@@ -1,4 +1,19 @@
 import { adminFetch } from './adminAuth';
+import { isDemoAdmin } from './demoMode';
+import {
+  buyShipmentLabel as buyDemoShipmentLabel,
+  createBoxPreset as createDemoBoxPreset,
+  createOrderShipment as createDemoOrderShipment,
+  deleteBoxPreset as deleteDemoBoxPreset,
+  deleteOrderShipment as deleteDemoOrderShipment,
+  fetchShipmentLabelStatus as fetchDemoShipmentLabelStatus,
+  fetchShipmentQuotes as fetchDemoShipmentQuotes,
+  getShippingSettings as getDemoShippingSettings,
+  listOrderShipments as listDemoOrderShipments,
+  updateBoxPreset as updateDemoBoxPreset,
+  updateOrderShipment as updateDemoOrderShipment,
+  updateShipFrom as updateDemoShipFrom,
+} from './adminClient';
 
 export type ShipFromSettings = {
   shipFromName: string;
@@ -114,6 +129,8 @@ export async function adminFetchShippingSettings(): Promise<{
   shipFrom: ShipFromSettings;
   boxPresets: ShippingBoxPreset[];
 }> {
+  if (isDemoAdmin()) return getDemoShippingSettings();
+
   const response = await adminFetch('/api/admin/settings/shipping', {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -127,6 +144,8 @@ export async function adminFetchShippingSettings(): Promise<{
 }
 
 export async function adminUpdateShipFrom(payload: Partial<ShipFromSettings>): Promise<ShipFromSettings> {
+  if (isDemoAdmin()) return updateDemoShipFrom(payload);
+
   const response = await adminFetch('/api/admin/settings/shipping/ship-from', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -144,6 +163,8 @@ export async function adminCreateBoxPreset(payload: {
   heightIn: number;
   defaultWeightLb?: number | null;
 }): Promise<ShippingBoxPreset[]> {
+  if (isDemoAdmin()) return createDemoBoxPreset(payload);
+
   const response = await adminFetch('/api/admin/settings/shipping/box-presets', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -164,6 +185,8 @@ export async function adminUpdateBoxPreset(
     defaultWeightLb?: number | null;
   }
 ): Promise<ShippingBoxPreset[]> {
+  if (isDemoAdmin()) return updateDemoBoxPreset(id, payload);
+
   const response = await adminFetch(`/api/admin/settings/shipping/box-presets/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -175,6 +198,8 @@ export async function adminUpdateBoxPreset(
 }
 
 export async function adminDeleteBoxPreset(id: string): Promise<ShippingBoxPreset[]> {
+  if (isDemoAdmin()) return deleteDemoBoxPreset(id);
+
   const response = await adminFetch(`/api/admin/settings/shipping/box-presets/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Accept: 'application/json' },
@@ -183,11 +208,12 @@ export async function adminDeleteBoxPreset(id: string): Promise<ShippingBoxPrese
   const data = await parseJson<any>(response);
   return Array.isArray(data.boxPresets) ? (data.boxPresets as ShippingBoxPreset[]) : [];
 }
-
 export async function adminFetchOrderShipments(orderId: string): Promise<{
   shipments: OrderShipment[];
   summary: { actualLabelTotalCents: number };
 }> {
+  if (isDemoAdmin()) return listDemoOrderShipments(orderId);
+
   const response = await adminFetch(`/api/admin/orders/${encodeURIComponent(orderId)}/shipments`, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -212,6 +238,8 @@ export async function adminCreateOrderShipment(
     weightLb?: number | null;
   }
 ): Promise<{ shipment: OrderShipment | null; shipments: OrderShipment[] }> {
+  if (isDemoAdmin()) return createDemoOrderShipment(orderId, payload);
+
   const response = await adminFetch(`/api/admin/orders/${encodeURIComponent(orderId)}/shipments`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -236,6 +264,8 @@ export async function adminUpdateOrderShipment(
     weightLb?: number | null;
   }
 ): Promise<{ shipment: OrderShipment | null; shipments: OrderShipment[] }> {
+  if (isDemoAdmin()) return updateDemoOrderShipment(orderId, shipmentId, payload);
+
   const response = await adminFetch(
     `/api/admin/orders/${encodeURIComponent(orderId)}/shipments/${encodeURIComponent(shipmentId)}`,
     {
@@ -253,6 +283,8 @@ export async function adminUpdateOrderShipment(
 }
 
 export async function adminDeleteOrderShipment(orderId: string, shipmentId: string): Promise<OrderShipment[]> {
+  if (isDemoAdmin()) return deleteDemoOrderShipment(orderId, shipmentId);
+
   const response = await adminFetch(
     `/api/admin/orders/${encodeURIComponent(orderId)}/shipments/${encodeURIComponent(shipmentId)}`,
     {
@@ -277,6 +309,8 @@ export async function adminFetchShipmentQuotes(
   rawResponseHints: ShipmentQuoteDebugHints | null;
   shipments: OrderShipment[];
 }> {
+  if (isDemoAdmin()) return fetchDemoShipmentQuotes(orderId, shipmentId);
+
   const response = await adminFetch(
     `/api/admin/orders/${encodeURIComponent(orderId)}/shipments/${encodeURIComponent(shipmentId)}/quotes`,
     {
@@ -351,6 +385,8 @@ export async function adminBuyShipmentLabel(
   pendingRefresh: boolean;
   refreshed?: boolean;
 }> {
+  if (isDemoAdmin()) return buyDemoShipmentLabel(orderId, shipmentId, payload);
+
   const response = await adminFetch(
     `/api/admin/orders/${encodeURIComponent(orderId)}/shipments/${encodeURIComponent(shipmentId)}/buy`,
     {
@@ -379,6 +415,8 @@ export async function adminFetchShipmentLabelStatus(
   pendingRefresh: boolean;
   refreshed?: boolean;
 }> {
+  if (isDemoAdmin()) return fetchDemoShipmentLabelStatus(orderId, shipmentId);
+
   const response = await adminFetch(
     `/api/admin/orders/${encodeURIComponent(orderId)}/shipments/${encodeURIComponent(shipmentId)}/label-status`,
     {

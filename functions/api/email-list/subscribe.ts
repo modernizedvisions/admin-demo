@@ -1,4 +1,5 @@
 import { ensureEmailListSchema, jsonResponse, normalizeEmail, nowIso, type EmailListEnv } from '../_lib/emailList';
+import { forbidIfDemo } from '../_lib/demoGuard';
 
 type SubscribeBody = {
   email?: unknown;
@@ -6,6 +7,8 @@ type SubscribeBody = {
 
 export async function onRequestPost(context: { request: Request; env: EmailListEnv }): Promise<Response> {
   try {
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     const body = (await context.request.json().catch(() => null)) as SubscribeBody | null;
     const email = normalizeEmail(body?.email);
     if (!email) {
@@ -37,4 +40,3 @@ export async function onRequest(context: { request: Request; env: EmailListEnv }
   }
   return onRequestPost(context);
 }
-

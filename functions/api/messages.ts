@@ -1,5 +1,6 @@
 import { sendEmail, type EmailEnv } from '../_lib/email';
 import { ensureMessagesSchema } from './_lib/messagesSchema';
+import { forbidIfDemo } from './_lib/demoGuard';
 
 type D1PreparedStatement = {
   run(): Promise<{ success: boolean; error?: string }>;
@@ -39,6 +40,8 @@ const SUBJECT = 'New Inquiry - Dover Designs';
 
 export async function onRequestPost(context: { env: MessageEnv; request: Request }): Promise<Response> {
   try {
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     const debugMessages = (context.env as any).DEBUG_MESSAGES === '1';
     await ensureMessagesSchema(context.env.DB);
     const body = (await context.request.json().catch(() => null)) as MessageInput | null;

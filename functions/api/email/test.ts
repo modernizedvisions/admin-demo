@@ -1,5 +1,6 @@
 import { resolveFromEmail, sendEmail, type EmailEnv } from '../../_lib/email';
 import { renderOwnerNewSaleEmailHtml, renderOwnerNewSaleEmailText } from '../../_lib/ownerNewSaleEmail';
+import { forbidIfDemo } from '../_lib/demoGuard';
 
 type TestBody = {
   to?: string;
@@ -8,6 +9,8 @@ type TestBody = {
 // TODO: Add auth before enabling this endpoint in production.
 export async function onRequestPost(context: { request: Request; env: EmailEnv }): Promise<Response> {
   const { request, env } = context;
+  const blocked = forbidIfDemo(env as Record<string, unknown>);
+  if (blocked) return blocked;
   const body = (await request.json().catch(() => null)) as TestBody | null;
   const ownerTo = env.RESEND_OWNER_TO || env.EMAIL_OWNER_TO || null;
   const to = body?.to?.trim() || ownerTo || '';

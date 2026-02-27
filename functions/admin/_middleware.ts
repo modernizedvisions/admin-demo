@@ -29,6 +29,10 @@ export const onRequest = async (context: MiddlewareContext): Promise<Response> =
     return context.next();
   }
 
+  if (String(context.env?.DEMO_ADMIN || '') === '1') {
+    return context.next('/index.html');
+  }
+
   const session = await getAdminSession(context.env, context.request);
   const hasSession = !!session;
 

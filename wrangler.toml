@@ -12,3 +12,7 @@ migrations_dir = "db/migrations"
 binding = "IMAGES_BUCKET"
 bucket_name = "ecommerce-template"
 preview_bucket_name = "ecommerce-template"
+
+[vars]
+DEMO_ADMIN = '1'
+

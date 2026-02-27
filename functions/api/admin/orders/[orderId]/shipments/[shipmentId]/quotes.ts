@@ -26,6 +26,7 @@ import {
   validateShipFrom,
   type ShippingLabelsEnv,
 } from '../../../../../_lib/shippingLabels';
+import { isDemoEnv } from '../../../../../_lib/demoGuard';
 
 type CacheRow = {
   id: string;
@@ -114,6 +115,119 @@ const maybeDebugHints = (rawResponseHints: EasyshipRawResponseHints | undefined)
       }
     : {};
 
+const trimOrNull = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const toPositiveNumberOrNull = (value: unknown): number | null => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return numeric;
+};
+
+const buildDemoOrderItems = (value: unknown): EasyshipOrderItem[] => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const quantityRaw = Number(row.quantity);
+      const quantity = Number.isFinite(quantityRaw) && quantityRaw > 0 ? Math.floor(quantityRaw) : 1;
+      const declaredValueRaw = Number(row.priceCents);
+      const declaredValueCents =
+        Number.isFinite(declaredValueRaw) && declaredValueRaw >= 0 ? Math.round(declaredValueRaw) : 1;
+      return {
+        description: trimOrNull(row.productName) || 'Order item',
+        quantity,
+        declaredValueCents,
+      };
+    })
+    .filter((item): item is EasyshipOrderItem => !!item);
+};
+
+const toDemoQuoteContext = (params: { orderId: string; shipmentId: string }, body: Record<string, unknown> | null) => {
+  const demoOrder = (body?.demoOrder || null) as Record<string, unknown> | null;
+  const demoShipment = (body?.demoShipment || null) as Record<string, unknown> | null;
+  const demoShipFrom = (body?.demoShipFrom || null) as Record<string, unknown> | null;
+  if (!demoOrder || !demoShipment || !demoShipFrom) {
+    return { error: 'Missing demoOrder, demoShipment, or demoShipFrom payload.' } as const;
+  }
+
+  const shippingAddress = (demoOrder.shippingAddress || null) as Record<string, unknown> | null;
+  const destination = {
+    name: trimOrNull(shippingAddress?.name) || trimOrNull(demoOrder.customerName) || 'Customer',
+    companyName: trimOrNull(shippingAddress?.companyName),
+    email: trimOrNull(shippingAddress?.email) || trimOrNull(demoOrder.customerEmail),
+    phone: trimOrNull(shippingAddress?.phone),
+    line1: trimOrNull(shippingAddress?.line1),
+    line2: trimOrNull(shippingAddress?.line2),
+    city: trimOrNull(shippingAddress?.city),
+    state: trimOrNull(shippingAddress?.state),
+    postalCode: trimOrNull(shippingAddress?.postalCode) || trimOrNull(shippingAddress?.postal_code),
+    country: (trimOrNull(shippingAddress?.country) || 'US').toUpperCase(),
+  };
+  if (!hasRequiredDestination(destination)) {
+    return { error: 'Order shipping destination is incomplete.' } as const;
+  }
+
+  const dimensions = {
+    lengthIn:
+      toPositiveNumberOrNull(demoShipment.effectiveLengthIn) ??
+      toPositiveNumberOrNull(demoShipment.customLengthIn) ??
+      toPositiveNumberOrNull(demoShipment.lengthIn),
+    widthIn:
+      toPositiveNumberOrNull(demoShipment.effectiveWidthIn) ??
+      toPositiveNumberOrNull(demoShipment.customWidthIn) ??
+      toPositiveNumberOrNull(demoShipment.widthIn),
+    heightIn:
+      toPositiveNumberOrNull(demoShipment.effectiveHeightIn) ??
+      toPositiveNumberOrNull(demoShipment.customHeightIn) ??
+      toPositiveNumberOrNull(demoShipment.heightIn),
+    weightLb: toPositiveNumberOrNull(demoShipment.weightLb),
+  };
+  if (!dimensions.lengthIn || !dimensions.widthIn || !dimensions.heightIn || !dimensions.weightLb) {
+    return { error: 'Shipment is missing dimensions or weight.' } as const;
+  }
+
+  const shipFrom = {
+    shipFromName: trimOrNull(demoShipFrom.shipFromName) || '',
+    shipFromCompany: trimOrNull(demoShipFrom.shipFromCompany) || 'Dover Designs',
+    shipFromAddress1: trimOrNull(demoShipFrom.shipFromAddress1) || '',
+    shipFromAddress2: trimOrNull(demoShipFrom.shipFromAddress2) || '',
+    shipFromCity: trimOrNull(demoShipFrom.shipFromCity) || '',
+    shipFromState: trimOrNull(demoShipFrom.shipFromState) || '',
+    shipFromPostal: trimOrNull(demoShipFrom.shipFromPostal) || '',
+    shipFromCountry: (trimOrNull(demoShipFrom.shipFromCountry) || 'US').toUpperCase(),
+    shipFromPhone: trimOrNull(demoShipFrom.shipFromPhone) || '',
+    updatedAt: null,
+  };
+
+  const missingShipFrom = validateShipFrom(shipFrom);
+  if (missingShipFrom.length) {
+    return {
+      error: 'Ship-from settings are incomplete.',
+      missingShipFrom,
+    } as const;
+  }
+
+  return {
+    orderId: trimOrNull(demoOrder.id) || params.orderId,
+    shipmentId: trimOrNull(demoShipment.id) || params.shipmentId,
+    shipFrom,
+    destination,
+    dimensions: {
+      lengthIn: dimensions.lengthIn,
+      widthIn: dimensions.widthIn,
+      heightIn: dimensions.heightIn,
+      weightLb: dimensions.weightLb,
+    },
+    items: buildDemoOrderItems(demoOrder.items),
+    shipment: demoShipment,
+  } as const;
+};
+
 export async function onRequestPost(
   context: { request: Request; env: ShippingLabelsEnv & Record<string, string | undefined> }
 ): Promise<Response> {
@@ -123,6 +237,74 @@ export async function onRequestPost(
   if (!params) return jsonResponse({ ok: false, error: 'Missing orderId or shipmentId' }, 400);
 
   try {
+    if (isDemoEnv(context.env as Record<string, unknown>)) {
+      const body = (await context.request.json().catch(() => null)) as Record<string, unknown> | null;
+      const demo = toDemoQuoteContext(params, body);
+      if ('error' in demo) {
+        return jsonResponse(
+          {
+            ok: false,
+            error: demo.error,
+            ...(demo.missingShipFrom ? { missing: demo.missingShipFrom } : {}),
+          },
+          400
+        );
+      }
+
+      const allowedCarriers = getAllowedCarriers(context.env);
+      const rateRequest = toEasyshipRateRequest(demo.shipFrom, demo.destination, demo.dimensions, demo.items);
+      const signaturePayload = buildRateCacheSignaturePayload({
+        orderId: demo.orderId,
+        destination: rateRequest.destination,
+        dimensions: rateRequest.dimensions,
+        allowedCarriers,
+      });
+      const shipmentTempKey = await digestHex(signaturePayload);
+      const liveRates = await fetchEasyshipRates(context.env, rateRequest);
+      const rawRates = liveRates.rates;
+      const allowedRates = filterAllowedRates(rawRates, allowedCarriers).sort((a, b) => a.amountCents - b.amountCents);
+
+      if (!rawRates.length) {
+        return jsonResponse({
+          ok: true,
+          cached: false,
+          shipmentTempKey,
+          expiresAt: null,
+          rates: [],
+          selectedQuoteId: null,
+          warning: liveRates.warning || NO_SHIPPING_SOLUTIONS_WARNING,
+          shipments: [{ ...demo.shipment, quoteSelectedId: null, updatedAt: new Date().toISOString() }],
+          ...maybeDebugHints(liveRates.rawResponseHints),
+        });
+      }
+
+      if (!allowedRates.length) {
+        return jsonResponse(
+          {
+            ok: false,
+            code: 'NO_QUOTES',
+            error: 'No supported carrier quotes found for this parcel.',
+            ...maybeDebugHints(liveRates.rawResponseHints),
+          },
+          422
+        );
+      }
+
+      const normalizedRates = allowedRates.map(normalizeRateForClient);
+      const cheapest = pickCheapestRate(allowedRates);
+      const selectedQuoteId = cheapest?.id || null;
+      return jsonResponse({
+        ok: true,
+        cached: false,
+        shipmentTempKey,
+        expiresAt: null,
+        rates: normalizedRates,
+        selectedQuoteId,
+        shipments: [{ ...demo.shipment, quoteSelectedId: selectedQuoteId, updatedAt: new Date().toISOString() }],
+        ...maybeDebugHints(liveRates.rawResponseHints),
+      });
+    }
+
     await ensureShippingLabelsSchema(context.env.DB);
     if (!(await orderExists(context.env.DB, params.orderId))) {
       return jsonResponse({ ok: false, error: 'Order not found' }, 404);

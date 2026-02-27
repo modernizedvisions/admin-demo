@@ -1,6 +1,8 @@
 import type { Product } from '../types';
 import { getLocalProducts } from './localProducts';
 import { mockProducts } from './mockData';
+import { isDemoAdmin } from '../demoMode';
+import { listSoldProducts as listDemoSoldProducts } from '../adminClient';
 const PRODUCTS_API_PATH = '/api/products';
 
 async function fetchProductsFromApi(): Promise<Product[] | null> {
@@ -81,6 +83,7 @@ export async function getRelatedProducts(type: string, excludeProductId: string)
 }
 
 export async function getSoldProducts(): Promise<Product[]> {
+  if (isDemoAdmin()) return listDemoSoldProducts();
   try {
     const response = await fetch(`${PRODUCTS_API_PATH}?filter=sold`, {
       headers: { Accept: 'application/json' },
@@ -101,3 +104,4 @@ export async function getSoldProducts(): Promise<Product[]> {
     throw error;
   }
 }
+

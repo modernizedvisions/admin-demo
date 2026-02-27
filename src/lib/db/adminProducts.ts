@@ -1,11 +1,12 @@
 import type { Product } from '../types';
 import { adminFetch } from '../adminAuth';
+import { isDemoAdmin } from '../demoMode';
 import {
-  addLocalProduct,
-  deleteLocalProduct,
-  getLocalProducts,
-  updateLocalProduct,
-} from './localProducts';
+  createProduct as createDemoProduct,
+  deleteProduct as deleteDemoProduct,
+  listProducts as listDemoProducts,
+  updateProduct as updateDemoProduct,
+} from '../adminClient';
 
 export type AdminProductInput = {
   name: string;
@@ -49,55 +50,83 @@ const handleResponse = async (response: Response) => {
 };
 
 export async function fetchAdminProducts(): Promise<Product[]> {
-  try {
-    const response = await adminFetch(ADMIN_PRODUCTS_PATH, { headers: { Accept: 'application/json' } });
-    const data = await handleResponse(response);
-    return Array.isArray(data.products) ? (data.products as Product[]) : [];
-  } catch (error) {
-    console.error('Admin products API unavailable', error);
-    throw error;
-  }
+  if (isDemoAdmin()) return listDemoProducts();
+
+  const response = await adminFetch(ADMIN_PRODUCTS_PATH, { headers: { Accept: 'application/json' } });
+  const data = await handleResponse(response);
+  return Array.isArray(data.products) ? (data.products as Product[]) : [];
 }
 
 export async function createAdminProduct(input: AdminProductInput): Promise<Product | null> {
-  try {
-    const response = await adminFetch(ADMIN_PRODUCTS_PATH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(input),
+  if (isDemoAdmin()) {
+    return createDemoProduct({
+      name: input.name,
+      description: input.description,
+      priceCents: input.priceCents,
+      type: input.category,
+      category: input.category,
+      imageUrl: input.imageUrl,
+      imageUrls: input.imageUrls,
+      primaryImageId: input.primaryImageId,
+      imageIds: input.imageIds,
+      quantityAvailable: input.quantityAvailable,
+      oneoff: input.isOneOff,
+      visible: input.isActive,
+      collection: input.collection,
+      shippingOverrideEnabled: input.shippingOverrideEnabled,
+      shippingOverrideAmountCents: input.shippingOverrideAmountCents,
     });
-    const data = await handleResponse(response);
-    return data.product ?? null;
-  } catch (error) {
-    console.error('Create product failed against API', error);
-    throw error;
   }
+
+  const response = await adminFetch(ADMIN_PRODUCTS_PATH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const data = await handleResponse(response);
+  return data.product ?? null;
 }
 
 export async function updateAdminProduct(id: string, input: AdminProductUpdateInput): Promise<Product | null> {
-  try {
-    const response = await adminFetch(`${ADMIN_PRODUCTS_PATH}/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(input),
-    });
-    const data = await handleResponse(response);
-    return data.product ?? null;
-  } catch (error) {
-    console.error('Update product failed against API', error);
-    throw error;
+  if (isDemoAdmin()) {
+    const patch: Partial<Product> = {
+      name: input.name,
+      description: input.description,
+      priceCents: input.priceCents,
+      type: input.category,
+      category: input.category,
+      imageUrl: input.imageUrl,
+      imageUrls: input.imageUrls,
+      primaryImageId: input.primaryImageId,
+      imageIds: input.imageIds,
+      quantityAvailable: input.quantityAvailable,
+      oneoff: input.isOneOff,
+      visible: input.isActive,
+      collection: input.collection,
+      shippingOverrideEnabled: input.shippingOverrideEnabled,
+      shippingOverrideAmountCents: input.shippingOverrideAmountCents,
+    };
+    return updateDemoProduct(id, patch);
   }
+
+  const response = await adminFetch(`${ADMIN_PRODUCTS_PATH}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const data = await handleResponse(response);
+  return data.product ?? null;
 }
 
 export async function deleteAdminProduct(id: string): Promise<void> {
-  try {
-    const response = await adminFetch(`${ADMIN_PRODUCTS_PATH}/${id}`, {
-      method: 'DELETE',
-      headers: { Accept: 'application/json' },
-    });
-    await handleResponse(response);
-  } catch (error) {
-    console.error('Delete product failed against API', error);
-    throw error;
+  if (isDemoAdmin()) {
+    await deleteDemoProduct(id);
+    return;
   }
+
+  const response = await adminFetch(`${ADMIN_PRODUCTS_PATH}/${id}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  });
+  await handleResponse(response);
 }

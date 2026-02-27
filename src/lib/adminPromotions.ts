@@ -1,5 +1,12 @@
 import { adminFetch } from './adminAuth';
 import type { Promotion } from './types';
+import { isDemoAdmin } from './demoMode';
+import {
+  createPromotion as createDemoPromotion,
+  deletePromotion as deleteDemoPromotion,
+  listPromotions as listDemoPromotions,
+  updatePromotion as updateDemoPromotion,
+} from './adminClient';
 
 export type PromotionInput = {
   name: string;
@@ -16,6 +23,7 @@ export type PromotionInput = {
 const PROMOTIONS_PATH = '/api/admin/promotions';
 
 export async function fetchAdminPromotions(): Promise<Promotion[]> {
+  if (isDemoAdmin()) return listDemoPromotions();
   const response = await adminFetch(PROMOTIONS_PATH, {
     headers: { Accept: 'application/json' },
   });
@@ -25,6 +33,7 @@ export async function fetchAdminPromotions(): Promise<Promotion[]> {
 }
 
 export async function createAdminPromotion(payload: PromotionInput): Promise<Promotion> {
+  if (isDemoAdmin()) return createDemoPromotion(payload);
   const response = await adminFetch(PROMOTIONS_PATH, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -38,6 +47,7 @@ export async function createAdminPromotion(payload: PromotionInput): Promise<Pro
 }
 
 export async function updateAdminPromotion(id: string, updates: Partial<PromotionInput>): Promise<Promotion> {
+  if (isDemoAdmin()) return updateDemoPromotion(id, updates);
   const response = await adminFetch(`${PROMOTIONS_PATH}?id=${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -51,6 +61,7 @@ export async function updateAdminPromotion(id: string, updates: Partial<Promotio
 }
 
 export async function deleteAdminPromotion(id: string): Promise<void> {
+  if (isDemoAdmin()) return deleteDemoPromotion(id);
   const response = await adminFetch(`${PROMOTIONS_PATH}?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Accept: 'application/json' },

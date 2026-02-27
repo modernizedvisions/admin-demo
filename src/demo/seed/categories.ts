@@ -1,0 +1,53 @@
+import type { Category } from '../../lib/types';
+
+export const seedCategories: Category[] = [
+  {
+    id: 'seed_cat_keepsakes',
+    name: 'Keepsakes',
+    subtitle: 'Signature shell keepsakes',
+    slug: 'keepsakes',
+    showOnHomePage: true,
+    shippingCents: 900,
+    sortOrder: 0,
+    optionGroupLabel: 'Finish',
+    optionGroupOptions: ['Natural', 'Pearl', 'Gold Leaf'],
+  },
+  {
+    id: 'seed_cat_wedding',
+    name: 'Wedding',
+    subtitle: 'Wedding and event designs',
+    slug: 'wedding',
+    showOnHomePage: true,
+    shippingCents: 1200,
+    sortOrder: 1,
+    optionGroupLabel: 'Style',
+    optionGroupOptions: ['Classic', 'Script', 'Minimal'],
+  },
+  {
+    id: 'seed_cat_home',
+    name: 'Home Decor',
+    subtitle: 'Coastal decor accents',
+    slug: 'home-decor',
+    showOnHomePage: true,
+    shippingCents: 1000,
+    sortOrder: 2,
+  },
+  {
+    id: 'seed_cat_ornaments',
+    name: 'Ornaments',
+    subtitle: 'Seasonal pieces',
+    slug: 'ornaments',
+    showOnHomePage: false,
+    shippingCents: 700,
+    sortOrder: 3,
+  },
+  {
+    id: 'seed_cat_gift_sets',
+    name: 'Gift Sets',
+    subtitle: 'Ready-to-gift bundles',
+    slug: 'gift-sets',
+    showOnHomePage: false,
+    shippingCents: 1400,
+    sortOrder: 4,
+  },
+];

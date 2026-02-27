@@ -5,6 +5,7 @@ import {
   resolveImageUrlsToIds,
 } from '../../lib/images';
 import { requireAdmin } from '../../_lib/adminAuth';
+import { forbidIfDemo } from '../../_lib/demoGuard';
 import { createStripePrice, createStripeProduct } from '../../../_lib/stripeClient';
 
 type D1PreparedStatement = {
@@ -255,6 +256,8 @@ export async function onRequestPut(context: {
   try {
     const unauthorized = await requireAdmin(context.request, context.env);
     if (unauthorized) return unauthorized;
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     console.log('[products save] incoming', {
       method: context.request.method,
       url: context.request.url,
@@ -547,6 +550,8 @@ export async function onRequestDelete(context: {
   try {
     const unauthorized = await requireAdmin(context.request, context.env);
     if (unauthorized) return unauthorized;
+    const blocked = forbidIfDemo(context.env as Record<string, unknown>);
+    if (blocked) return blocked;
     const id = context.params?.id;
     if (!id) {
       return new Response(JSON.stringify({ error: 'Product id is required' }), {

@@ -40,8 +40,11 @@ export type AdminOrder = {
 };
 
 import { adminFetch } from '../adminAuth';
+import { isDemoAdmin } from '../demoMode';
+import { listOrders as listDemoOrders } from '../adminClient';
 
 export async function getAdminOrders(): Promise<{ orders: AdminOrder[]; unseenCount: number }> {
+  if (isDemoAdmin()) return listDemoOrders();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
 
@@ -80,3 +83,4 @@ export async function getAdminOrders(): Promise<{ orders: AdminOrder[]; unseenCo
   }
   return { orders, unseenCount };
 }
+

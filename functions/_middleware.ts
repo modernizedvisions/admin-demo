@@ -1,6 +1,7 @@
 type Env = {
   IMAGES_BUCKET?: R2Bucket;
   IMAGE_STORAGE_PREFIX?: string;
+  DEMO_ADMIN?: string;
 };
 
 const json = (data: unknown, status = 200) =>
@@ -22,12 +23,27 @@ const normalizePrefix = (value?: string): string => {
   return trimmed || 'site';
 };
 
+const shouldPassThroughInDemo = (pathname: string): boolean => {
+  if (pathname.startsWith('/admin')) return true;
+  if (pathname.startsWith('/api/')) return true;
+  if (pathname.startsWith('/images/')) return true;
+  if (pathname.startsWith('/assets/')) return true;
+  if (pathname === '/favicon.ico' || pathname === '/robots.txt' || pathname === '/sitemap.xml') return true;
+  if (/\.[a-z0-9]+$/i.test(pathname)) return true;
+  return false;
+};
+
 export async function onRequest(context: {
   request: Request;
   env: Env;
   next: (input?: Request | string) => Promise<Response>;
 }): Promise<Response> {
   const url = new URL(context.request.url);
+
+  if (String(context.env.DEMO_ADMIN || '') === '1' && !shouldPassThroughInDemo(url.pathname)) {
+    return Response.redirect(`${url.origin}/admin`, 302);
+  }
+
   if (!url.pathname.startsWith('/images/')) {
     return context.next();
   }

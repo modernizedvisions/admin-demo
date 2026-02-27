@@ -1,5 +1,7 @@
 import type { AdminEmailListResponse, EmailListSubscribeResult } from './emailListTypes';
 import { adminFetch } from './adminAuth';
+import { isDemoAdmin } from './demoMode';
+import { listEmailList as listDemoEmailList } from './adminClient';
 
 const parseJson = async <T>(response: Response): Promise<T> => {
   const data = (await response.json().catch(() => null)) as T | null;
@@ -25,6 +27,11 @@ export async function subscribeToEmailList(email: string): Promise<EmailListSubs
 }
 
 export async function fetchAdminEmailList(): Promise<AdminEmailListResponse> {
+  if (isDemoAdmin()) {
+    const items = await listDemoEmailList();
+    return { ok: true, items };
+  }
+
   const response = await adminFetch('/api/admin/email-list', {
     method: 'GET',
     headers: {
