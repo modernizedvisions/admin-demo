@@ -722,27 +722,38 @@ export function ShippingLabelsModal({ open, order, onClose, onOpenSettings }: Sh
                     return (
                       <div key={shipment.id} className="lux-panel p-4">
                         <div className="mb-3 space-y-3">
-                          <div className="min-w-0 flex flex-wrap items-center gap-2">
-                            <h4 className="font-semibold text-charcoal">Parcel #{shipment.parcelIndex}</h4>
-                            {parcelStatus.state !== 'idle' && (
-                              <div
-                                title={parcelStatusTitle}
-                                className={`max-w-[360px] rounded-shell border px-2 py-1 text-[11px] leading-snug ${
-                                  parcelStatus.state === 'loading'
-                                    ? 'border-amber-300 bg-amber-50 text-amber-900'
-                                    : parcelStatus.state === 'success'
-                                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
-                                    : 'border-rose-300 bg-rose-50 text-rose-800'
-                                }`}
-                              >
-                                <div className="flex items-center gap-1">
-                                  {parcelStatus.state === 'loading' && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
-                                  <span className="break-words">{parcelStatusMessage}</span>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0 flex flex-wrap items-center gap-2">
+                              <h4 className="font-semibold text-charcoal">Parcel #{shipment.parcelIndex}</h4>
+                              {parcelStatus.state !== 'idle' && (
+                                <div
+                                  title={parcelStatusTitle}
+                                  className={`max-w-[360px] rounded-shell border px-2 py-1 text-[11px] leading-snug ${
+                                    parcelStatus.state === 'loading'
+                                      ? 'border-amber-300 bg-amber-50 text-amber-900'
+                                      : parcelStatus.state === 'success'
+                                      ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                                      : 'border-rose-300 bg-rose-50 text-rose-800'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1">
+                                    {parcelStatus.state === 'loading' && <Loader2 className="h-3 w-3 animate-spin shrink-0" />}
+                                    <span className="break-words">{parcelStatusMessage}</span>
+                                  </div>
+                                  {parcelStatus.state === 'error' && parcelStatus.subtext && (
+                                    <div className="mt-0.5 text-[10px] text-rose-700/90 break-words">{parcelStatus.subtext}</div>
+                                  )}
                                 </div>
-                                {parcelStatus.state === 'error' && parcelStatus.subtext && (
-                                  <div className="mt-0.5 text-[10px] text-rose-700/90 break-words">{parcelStatus.subtext}</div>
-                                )}
-                              </div>
+                              )}
+                            </div>
+                            {!isComplete && canRemove && (
+                              <button
+                                type="button"
+                                className="lux-button--ghost px-2 py-1 text-[10px] !text-rose-700"
+                                onClick={() => void handleRemoveParcel(shipment)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
                             )}
                           </div>
                           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -803,15 +814,6 @@ export function ShippingLabelsModal({ open, order, onClose, onOpenSettings }: Sh
                                 onClick={() => void handleBuyLabel(shipment)}
                               >
                                 Buy Label
-                              </button>
-                            )}
-                            {!isComplete && canRemove && (
-                              <button
-                                type="button"
-                                className="lux-button--ghost px-2 py-1 text-[10px] !text-rose-700"
-                                onClick={() => void handleRemoveParcel(shipment)}
-                              >
-                                <Trash2 className="h-4 w-4" />
                               </button>
                             )}
                           </div>
