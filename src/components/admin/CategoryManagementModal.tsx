@@ -281,13 +281,6 @@ export function CategoryManagementModal({
       title="Category Management"
       description="Add or delete categories available to products."
       maxWidth="3xl"
-      footer={
-        <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="admin-btn-secondary px-4 py-2 text-[10px]">
-            Close
-          </button>
-        </div>
-      }
     >
       <div className="px-0 pb-2 pt-0">
           {categoryMessage && (

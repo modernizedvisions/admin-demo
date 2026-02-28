@@ -326,13 +326,6 @@ export const AdminMessagesTab: React.FC<AdminMessagesTabProps> = ({ onCreateCust
             <Trash2 className="h-4 w-4" />
           </button>
         }
-        footer={
-          <div className="flex justify-end">
-            <button type="button" onClick={handleCloseDialog} className="admin-btn-secondary px-4 py-2 text-[10px]">
-              Close
-            </button>
-          </div>
-        }
       >
         {selectedMessage?.type === 'custom_order' && onCreateCustomOrderFromMessage && (
           <div className="mb-4">

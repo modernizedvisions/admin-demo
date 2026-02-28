@@ -568,20 +568,19 @@ export const AdminCustomOrdersTab: React.FC<AdminCustomOrdersTabProps> = ({
         title={selectedOrder ? `Order ${normalizeDisplayId(selectedOrder)}` : 'Custom Order'}
         description={selectedOrder ? `Placed ${safeDate(selectedOrder.createdAt || selectedOrder.created_at)}` : undefined}
         maxWidth="2xl"
+        hideCloseButton
         headerActions={
-          <button
-            type="button"
-            onClick={() => setIsArchiveConfirmOpen(true)}
-            disabled={!selectedOrder || !onArchiveOrder || isArchiving}
-            className="admin-btn-ghost px-2 py-1 text-[10px] !text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Archive custom order"
-            title="Archive"
-          >
-            <Archive className="h-4 w-4" />
-          </button>
-        }
-        footer={
-          <div className="flex w-full flex-wrap items-center justify-end gap-2">
+          <>
+            <button
+              type="button"
+              onClick={() => setIsArchiveConfirmOpen(true)}
+              disabled={!selectedOrder || !onArchiveOrder || isArchiving}
+              className="admin-btn-ghost px-2 py-1 text-[10px] !text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Archive custom order"
+              title="Archive"
+            >
+              <Archive className="h-4 w-4" />
+            </button>
             <button type="button" onClick={closeView} className="admin-btn-secondary px-4 py-2 text-[10px]">
               Close
             </button>
@@ -590,8 +589,9 @@ export const AdminCustomOrdersTab: React.FC<AdminCustomOrdersTabProps> = ({
               onClick={() => void handleSaveViewOrder()}
               disabled={viewSaveDisabled}
               idleLabel="Save Changes"
+              className="px-3 py-1 text-[10px]"
             />
-          </div>
+          </>
         }
       >
         {selectedOrder && (

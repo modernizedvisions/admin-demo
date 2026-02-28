@@ -895,13 +895,6 @@ export const AdminShopTab: React.FC<AdminShopTabProps> = ({
         footer={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
-              type="button"
-              onClick={() => setIsEditModalOpen(false)}
-              className="admin-btn-secondary px-4 py-2 text-[10px]"
-            >
-              Close
-            </button>
-            <button
               type="submit"
               form="edit-product-form"
               disabled={editProductSaveState === 'saving' || editOverrideAmountInvalid || !hasCategories}

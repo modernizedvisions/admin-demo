@@ -205,13 +205,6 @@ export function OrderDetailsModal({ open, order, onClose, onOpenShippingLabels }
       title={`Order ${idLabel}`}
       description={`Placed ${placedAt}`}
       maxWidth="2xl"
-      footer={
-        <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="admin-btn-secondary px-4 py-2 text-[10px]">
-            Close
-          </button>
-        </div>
-      }
     >
       <div className="grid grid-cols-1 gap-4">
             <section className="lux-panel p-4">
