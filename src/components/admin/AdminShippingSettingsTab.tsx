@@ -459,7 +459,7 @@ export function AdminShippingSettingsTab() {
                 disabled={isSavingShipFrom}
                 className="lux-button px-4 py-2 text-[10px] disabled:opacity-50"
               >
-                {isSavingShipFrom ? 'Saving...' : 'Save Ship-From'}
+                {isSavingShipFrom ? 'Saving...' : 'Save'}
               </button>
               {shipFrom.updatedAt && (
                 <span className="text-xs text-charcoal/60">Last updated: {new Date(shipFrom.updatedAt).toLocaleString()}</span>

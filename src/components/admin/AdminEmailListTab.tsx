@@ -134,37 +134,62 @@ export function AdminEmailListTab() {
       {sortedItems.length === 0 && !loading ? (
         <div className="text-sm text-charcoal/60">No emails yet.</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-driftwood/50 text-sm">
-            <thead className="bg-linen/70 text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">
-              <tr>
-                <th className="px-4 py-2 text-left">Received</th>
-                <th className="px-4 py-2 text-left">Email</th>
-                <th className="px-4 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-driftwood/50 bg-white/80 text-charcoal">
+        <>
+          <div className="sm:hidden">
+            <div className="divide-y divide-driftwood/50 rounded-shell border border-driftwood/60 bg-white/80">
               {sortedItems.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-4 py-2 text-charcoal/70">{formatDateTime(item.created_at) || item.created_at}</td>
-                  <td className="px-4 py-2 font-medium">{item.email}</td>
-                  <td className="px-4 py-2 text-right">
-                    <button
-                      type="button"
-                      className="lux-button--ghost px-3 py-1 text-[10px]"
-                      onClick={() => void handleCopy(item.email)}
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        <Copy className="h-3.5 w-3.5" />
-                        Copy
-                      </span>
-                    </button>
-                  </td>
-                </tr>
+                <div key={item.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-charcoal">{item.email}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="lux-button--ghost h-8 shrink-0 px-3 text-[10px]"
+                    onClick={() => void handleCopy(item.email)}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Copy className="h-3.5 w-3.5" />
+                      Copy
+                    </span>
+                  </button>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+          <div className="hidden sm:block">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-driftwood/50 text-sm">
+                <thead className="bg-linen/70 text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">
+                  <tr>
+                    <th className="px-4 py-2 text-left">Received</th>
+                    <th className="px-4 py-2 text-left">Email</th>
+                    <th className="px-4 py-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-driftwood/50 bg-white/80 text-charcoal">
+                  {sortedItems.map((item) => (
+                    <tr key={item.id}>
+                      <td className="px-4 py-2 text-charcoal/70">{formatDateTime(item.created_at) || item.created_at}</td>
+                      <td className="px-4 py-2 font-medium">{item.email}</td>
+                      <td className="px-4 py-2 text-right">
+                        <button
+                          type="button"
+                          className="lux-button--ghost px-3 py-1 text-[10px]"
+                          onClick={() => void handleCopy(item.email)}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
+                          </span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -74,9 +74,9 @@ export function AdminOrdersTab({
             <table className="w-full table-fixed min-w-0 divide-y divide-driftwood/50">
               <thead className="bg-linen/70">
                 <tr>
-                  <th className="w-2/5 px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">Customer</th>
-                  <th className="w-1/5 px-4 py-3 text-center align-middle text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">Total</th>
-                  <th className="w-2/5 px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">Actions</th>
+                  <th className="w-1/3 px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">Customer</th>
+                  <th className="w-1/3 px-4 py-3 text-center align-middle text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">Total</th>
+                  <th className="w-1/3 px-4 py-3 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white/80 divide-y divide-driftwood/40">
@@ -111,14 +111,14 @@ export function AdminOrdersTab({
                           <button
                             type="button"
                             onClick={() => onSelectOrder(order)}
-                            className="lux-button--ghost w-full px-3 py-1 text-[10px]"
+                            className="lux-button--ghost mx-auto w-[90%] px-3 py-1 text-[10px]"
                           >
                             View
                           </button>
                           <button
                             type="button"
                             onClick={() => onOpenShipping(order)}
-                            className="lux-button--ghost w-full px-3 py-1 text-[10px] inline-flex items-center justify-center"
+                            className="lux-button--ghost mx-auto w-[90%] px-3 py-1 text-[10px] inline-flex items-center justify-center"
                             aria-label="Shipping"
                           >
                             <Package className="h-3.5 w-3.5" aria-hidden="true" />

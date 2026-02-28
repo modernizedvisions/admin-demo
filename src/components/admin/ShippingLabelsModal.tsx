@@ -963,6 +963,7 @@ export function ShippingLabelsModal({ open, order, onClose, onOpenSettings }: Sh
                       if (carrier) return carrier;
                       return 'Carrier Not Selected';
                     })();
+                    const hasDownloadLabel = !!trimText(shipment.labelUrl);
                     const downloadDisabledTitle = 'No label yet';
                     const buyDisabled =
                       !shipFromReady ||
@@ -1017,13 +1018,24 @@ export function ShippingLabelsModal({ open, order, onClose, onOpenSettings }: Sh
                                 </span>
                               </button>
                             )}
-                            {shipment.labelUrl ? (
+                            {hasDownloadLabel && (
                               <a
-                                href={shipment.labelUrl}
+                                href={shipment.labelUrl!}
                                 target="_blank"
                                 rel="noreferrer"
                                 download
-                                className="lux-button--ghost px-3 py-2 text-[10px]"
+                                className="lux-button--ghost inline-flex w-full items-center justify-center px-3 py-2 text-[10px] sm:hidden"
+                              >
+                                Download Label (PDF)
+                              </a>
+                            )}
+                            {hasDownloadLabel ? (
+                              <a
+                                href={shipment.labelUrl!}
+                                target="_blank"
+                                rel="noreferrer"
+                                download
+                                className="lux-button--ghost hidden items-center justify-center px-3 py-2 text-[10px] sm:inline-flex"
                               >
                                 Download Label (PDF)
                               </a>
@@ -1032,7 +1044,7 @@ export function ShippingLabelsModal({ open, order, onClose, onOpenSettings }: Sh
                                 type="button"
                                 title={downloadDisabledTitle}
                                 disabled
-                                className="lux-button--ghost px-3 py-2 text-[10px] opacity-50 cursor-not-allowed"
+                                className="lux-button--ghost hidden items-center justify-center px-3 py-2 text-[10px] opacity-50 cursor-not-allowed sm:inline-flex"
                               >
                                 Download Label (PDF)
                               </button>

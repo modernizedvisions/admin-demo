@@ -4,6 +4,7 @@ import type { CustomOrdersImage, HeroCollageImage, HomeGalleryItem, HomeSiteCont
 import { AdminSectionHeader } from './AdminSectionHeader';
 import { AdminSaveButton } from './AdminSaveButton';
 import { adminUploadImageUnified, getAdminSiteContentHome, updateAdminSiteContentHome } from '../../lib/api';
+import { isDemoAdmin } from '../../lib/demoMode';
 import { ProgressiveImage } from '../ui/ProgressiveImage';
 
 export function AdminHomeTab() {
@@ -124,6 +125,7 @@ function HeroCollageAdmin({
   heroRotationEnabled = false,
   onHeroRotationToggle,
 }: HeroCollageAdminProps) {
+  const demoMode = isDemoAdmin();
   const slots = [0, 1, 2];
 
   const handleFileSelect = async (index: number, file: File) => {
@@ -222,23 +224,25 @@ function HeroCollageAdmin({
           title="Hero Images"
           subtitle="main images on your site"
         />
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-between rounded-shell border border-driftwood/60 bg-linen/70 px-3 py-2">
-          <div className="space-y-1">
-            <p className="text-[11px] uppercase tracking-[0.24em] font-semibold text-deep-ocean">Rotate Hero Images</p>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-charcoal/70">
-              ON: rotate through all hero images. OFF: show only the first image.
-            </p>
+        {!demoMode && (
+          <div className="mx-auto flex w-full max-w-2xl items-center justify-between rounded-shell border border-driftwood/60 bg-linen/70 px-3 py-2">
+            <div className="space-y-1">
+              <p className="text-[11px] uppercase tracking-[0.24em] font-semibold text-deep-ocean">Rotate Hero Images</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-charcoal/70">
+                ON: rotate through all hero images. OFF: show only the first image.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] font-semibold text-charcoal">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded-[4px] border-driftwood/70 text-deep-ocean"
+                checked={!!heroRotationEnabled}
+                onChange={(e) => onHeroRotationToggle?.(e.target.checked)}
+              />
+              <span>{heroRotationEnabled ? 'ON' : 'OFF'}</span>
+            </label>
           </div>
-          <label className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] font-semibold text-charcoal">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded-[4px] border-driftwood/70 text-deep-ocean"
-              checked={!!heroRotationEnabled}
-              onChange={(e) => onHeroRotationToggle?.(e.target.checked)}
-            />
-            <span>{heroRotationEnabled ? 'ON' : 'OFF'}</span>
-          </label>
-        </div>
+        )}
         <div className="w-full sm:flex sm:justify-end">
           <AdminSaveButton saveState={saveState} onClick={onSave} className="w-full sm:w-auto" />
         </div>

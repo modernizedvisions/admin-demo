@@ -423,10 +423,10 @@ export const AdminCustomOrdersTab: React.FC<AdminCustomOrdersTabProps> = ({
         ) : (
           <>
             <div className="sm:hidden">
-              <div className="grid grid-cols-[minmax(0,1fr)_8.5rem_2.5rem] gap-3 border-b border-driftwood/60 bg-linen/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">
-                <div>Customer</div>
+              <div className="grid grid-cols-3 items-center gap-2 border-b border-driftwood/60 bg-linen/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-deep-ocean/70">
+                <div className="text-left">Customer</div>
                 <div className="text-center">Actions</div>
-                <div className="text-right">Status</div>
+                <div className="text-left">Status</div>
               </div>
               <div className="divide-y divide-driftwood/50 bg-white/80">
                 {allCustomOrders.map((order) => {
@@ -437,40 +437,42 @@ export const AdminCustomOrdersTab: React.FC<AdminCustomOrdersTabProps> = ({
                   return (
                     <div
                       key={order.id}
-                      className="grid grid-cols-[minmax(0,1fr)_8.5rem_2.5rem] gap-3 px-4 py-3 text-sm text-charcoal"
+                      className="grid grid-cols-3 items-center gap-2 px-4 py-3 text-sm text-charcoal"
                     >
                       <div className="whitespace-normal break-words font-medium">
                         {order.customerName || 'Customer'}
                       </div>
-                      <div className="flex flex-col items-center gap-2 justify-self-center w-[8.5rem]">
-                        <button
-                          type="button"
-                          className="w-full lux-button--ghost px-3 py-1 text-[10px] h-9 leading-tight"
-                          onClick={() => openView(order)}
-                        >
-                          View
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full lux-button--ghost px-3 py-1 text-[10px] h-9 leading-tight disabled:opacity-60 disabled:cursor-not-allowed"
-                          disabled={isPaid || isSending}
-                          title={isPaid ? 'Already paid' : hasPaymentLink ? 'Resend payment link' : ''}
-                          onClick={() => handleSendPaymentLink(order.id)}
-                        >
-                          {isSending ? (
-                            <span className="inline-flex items-center justify-center gap-2 leading-tight">
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              Sending
-                            </span>
-                          ) : (
-                            <>
-                              <span className="block leading-tight">{hasPaymentLink ? 'Resend' : 'Send'}</span>
-                              <span className="block leading-tight">Payment</span>
-                            </>
-                          )}
-                        </button>
+                      <div className="flex justify-center">
+                        <div className="flex w-36 flex-col items-center gap-2">
+                          <button
+                            type="button"
+                            className="w-full lux-button--ghost px-3 py-1 text-[10px] h-9 leading-tight"
+                            onClick={() => openView(order)}
+                          >
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            className="w-full lux-button--ghost px-3 py-1 text-[10px] h-9 leading-tight disabled:opacity-60 disabled:cursor-not-allowed"
+                            disabled={isPaid || isSending}
+                            title={isPaid ? 'Already paid' : hasPaymentLink ? 'Resend payment link' : ''}
+                            onClick={() => handleSendPaymentLink(order.id)}
+                          >
+                            {isSending ? (
+                              <span className="inline-flex items-center justify-center gap-2 leading-tight">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                Sending
+                              </span>
+                            ) : (
+                              <>
+                                <span className="block leading-tight">{hasPaymentLink ? 'Resend' : 'Send'}</span>
+                                <span className="block leading-tight">Payment</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-start justify-end pt-1">
+                      <div className="flex items-start justify-start pt-1">
                         <span
                           role="img"
                           aria-label={isPaid ? 'Paid' : 'Not paid'}
